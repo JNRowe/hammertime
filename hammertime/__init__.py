@@ -1,17 +1,9 @@
+import json
 import os
 import sys
 import git
 import optparse
 from datetime import datetime, timedelta
-
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        print "Error: simplejson required"
-        sys.exit(1)
 
 __version__ = "0.2.2"
 
