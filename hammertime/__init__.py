@@ -1,9 +1,11 @@
 import json
+import optparse
 import os
 import sys
+
+from datetime import (datetime, timedelta)
+
 import git
-import optparse
-from datetime import datetime, timedelta
 
 __version__ = "0.2.2"
 
@@ -15,22 +17,25 @@ usage = """git time [options]
 
 parser = optparse.OptionParser(usage)
 
-parser.add_option('-b','--branch', action='store', dest='branch',
-        default='hammertime',
-        help = 'Sets the name of the branch that saves timing data.')
+parser.add_option('-b', '--branch', action='store', dest='branch',
+                  default='hammertime',
+                  help='Sets the name of the branch that saves timing data.')
 
-parser.add_option('-d','--dir', action='store', dest='folder',
-        default='.hammertime', 
-        help='Sets the folder that data is saved in.')
+parser.add_option('-d', '--dir', action='store', dest='folder',
+                  default='.hammertime',
+                  help='Sets the folder that data is saved in.')
 
-parser.add_option('-f','--file', action='store', dest='file',
-        default='times.json', help='Sets the file that data is saved in.')
+parser.add_option('-f', '--file', action='store', dest='file',
+                  default='times.json',
+                  help='Sets the file that data is saved in.')
 
-parser.add_option('-i','--indent', action='store', dest='indent', default=None,
-        help='Add indentation to JSON output, eg: -i 4')
+parser.add_option('-i', '--indent', action='store', dest='indent',
+                  default=None,
+                  help='Add indentation to JSON output, eg: -i 4')
 
-parser.add_option('-m','--message',action='store', dest='message',
-        default=False, help='Optional message with the start/stop commands')
+parser.add_option('-m', '--message', action='store', dest='message',
+                  default=False,
+                  help='Optional message with the start/stop commands')
 
 opts, args = parser.parse_args()
 
@@ -58,7 +63,8 @@ class DatetimeEncoder(json.JSONEncoder):
 def datetime_hook(obj):
     try:
         if obj.get('time', False):
-            obj['time'] = datetime.strptime(obj.get('time'), '%Y-%m-%dT%H:%M:%S.%f')
+            obj['time'] = datetime.strptime(obj.get('time'),
+                                            '%Y-%m-%dT%H:%M:%S.%f')
     finally:
         return obj
 
@@ -111,7 +117,7 @@ def init(repo, opts):
 
     # Load the data
     try:
-        data = json.load(open(FILE(repo)),object_hook = datetime_hook)
+        data = json.load(open(FILE(repo)), object_hook=datetime_hook)
     except ValueError:
         data = dict(times=[])
 
@@ -125,37 +131,45 @@ def write(repo, opts, timer):
     repo.index.add([FILE(repo)])
     repo.index.commit(opts.message or 'Hammertime!')
 
+
 def start(repo, opts, timer):
     timer.start(opts)
+
 
 def stop(repo, opts, timer):
     timer.stop(opts)
 
+
 def total(repo, opts, timer):
-    total = timedelta(seconds = 0)
-    
+    total = timedelta(seconds=0)
+
     for time in timer['times']:
         try:
             bits = map(int, time['delta'].split(':'))
             delta = (
-                timedelta(seconds = bits[0] * 3600)
-                + timedelta(seconds = bits[1] * 60)
-                + timedelta(seconds = bits[2])
+                timedelta(seconds=bits[0] * 3600)
+                + timedelta(seconds=bits[1] * 60)
+                + timedelta(seconds=bits[2])
             )
         except (KeyError, IndexError):
-            delta = timedelta(seconds = 0)
-    
+            delta = timedelta(seconds=0)
+
         total += delta
-    
+
     print total
+
 
 def show(repo, opts, timer):
     print json.dumps(timer, indent=opts.indent, cls=DatetimeEncoder)
 
+
 def default(repo, opts, timer):
     parser.print_usage()
 
-commands=dict(start=start, stop=stop, show=show, default=default, total=total)
+
+commands = dict(start=start, stop=stop, show=show, default=default,
+                total=total)
+
 
 def main():
     try:
@@ -169,7 +183,7 @@ def main():
         sys.exit(1)
 
     if len(repo.heads) == 0:
-        print """fatal: No initial commit. 
+        print """fatal: No initial commit.
        Perhaps create a master branch and an inital commit."""
         sys.exit(1)
 
@@ -181,17 +195,20 @@ def main():
         repo.git.stash()
 
         timer = init(repo, opts)
-        
+
         commands[cmd](repo, opts, timer)
 
-        if cmd in ['start','stop']:
+        if cmd in ['start', 'stop']:
             write(repo, opts, timer)
     finally:
         # Switch back to old branch
         getattr(repo.heads, branch.name).checkout()
 
         # Pop the stashed changes
-        try: repo.git.stash('pop')
-        except: pass
+        try:
+            repo.git.stash('pop')
+        except:
+            pass
 
-if __name__ == '__main__': main()
+if __name__ == '__main__':
+    main()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup,find_packages
+from setuptools import setup, find_packages
 
 setup(
     name='Hammertime',
@@ -17,14 +17,14 @@ setup(
     packages=find_packages(),
     include_package_data=True,
 
-    entry_points = {
+    entry_points={
         'console_scripts': [
             'git-time = hammertime:main',
         ],
     },
-    
-    install_requires = [
-        'GitPython' 
+
+    install_requires=[
+        'GitPython'
     ],
 
     classifiers=[
@@ -38,5 +38,5 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development',
     ],
-    zip_safe = False,
+    zip_safe=False,
 )
