@@ -78,7 +78,7 @@ class Timer(dict):
     def start(self, opts):
         self['times'].append({
             'start': {
-                'time': datetime.now(),
+                'time': datetime.utcnow(),
                 'message': opts.message or None
             }
         })
@@ -86,7 +86,7 @@ class Timer(dict):
     def stop(self, opts):
         time = self['times'][-1]
 
-        now = datetime.now()
+        now = datetime.utcnow()
 
         time.update({
             'stop': {
