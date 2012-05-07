@@ -1,59 +1,32 @@
 """Git based time tracking"""
 
 import json
-import optparse
 import os
 import sys
 
 from datetime import (datetime, timedelta)
 
+import argh
 import git
 
 __version__ = "0.2.2"
 
-usage = """git time [options]
-   or: git time start [options]
-   or: git time stop [options]
-   or: git time show [options]
-"""
 
-parser = optparse.OptionParser(usage)
+def create_cmdline(commands):
+    p = argh.ArghParser('\n'.join(__doc__.strip().splitlines()[2:]))
 
-parser.add_option('-b', '--branch', action='store', dest='branch',
-                  default='hammertime',
-                  help='Sets the name of the branch that saves timing data.')
+    p.add_argument('-b', '--branch', default='hammertime',
+                   help='set the name of the branch that saves timing data')
 
-parser.add_option('-d', '--dir', action='store', dest='folder',
-                  default='.hammertime',
-                  help='Sets the folder that data is saved in.')
+    p.add_argument('-d', '--dir', dest='folder',  default='.hammertime',
+                   help='sets the folder that data is saved in')
 
-parser.add_option('-f', '--file', action='store', dest='file',
-                  default='times.json',
-                  help='Sets the file that data is saved in.')
+    p.add_argument('-f', '--file', default='times.json',
+                   help='sets the file that data is saved in')
 
-parser.add_option('-i', '--indent', action='store', dest='indent',
-                  default=None,
-                  help='Add indentation to JSON output, eg: -i 4')
+    p.add_commands(commands)
 
-parser.add_option('-m', '--message', action='store', dest='message',
-                  default=False,
-                  help='Optional message with the start/stop commands')
-
-opts, args = parser.parse_args()
-
-try:
-    opts.indent = int(opts.indent)
-except TypeError:
-    opts.indent = None
-
-DIR = os.getcwd()
-FOLDER = lambda repo: os.path.join(repo.working_dir, opts.folder)
-FILE = lambda repo: os.path.join(repo.working_dir, opts.folder, opts.file)
-
-try:
-    cmd = args[0]
-except IndexError:
-    cmd = 'default'
+    return p
 
 
 class DatetimeEncoder(json.JSONEncoder):
@@ -84,16 +57,16 @@ class Timer(dict):
 
     """Base timer container."""
 
-    def start(self, opts):
+    def start(self, message):
         """Start a new timer, if none active."""
         self['times'].append({
             'start': {
                 'time': datetime.utcnow(),
-                'message': opts.message or None
+                'message': message or None
             }
         })
 
-    def stop(self, opts):
+    def stop(self, message):
         """Stop running timer."""
         time = self['times'][-1]
 
@@ -102,7 +75,7 @@ class Timer(dict):
         time.update({
             'stop': {
                 'time': now,
-                'message': opts.message or None
+                'message': message or None
             }
         })
 
@@ -112,27 +85,29 @@ class Timer(dict):
             time['delta'] = None
 
 
-
-def init(repo, opts):
+def init(repo, args):
     """Initiate and load timer data."""
     # Make sure a branch is available
-    if not hasattr(repo.heads, opts.branch):
-        repo.git.branch(opts.branch)
+    if not hasattr(repo.heads, args.branch):
+        repo.git.branch(args.branch)
 
     # Switch the branch
-    getattr(repo.heads, opts.branch).checkout()
+    getattr(repo.heads, args.branch).checkout()
+
+    folder = os.path.join(repo.working_dir, args.folder)
+    file = os.path.join(repo.working_dir, args.folder, args.file)
 
     # Make sure there's a folder
-    if not os.path.exists(FOLDER(repo)):
-        os.mkdir(FOLDER(repo))
+    if not os.path.exists(folder):
+        os.mkdir(folder)
 
     # And the data file
-    if not os.path.exists(FILE(repo)):
-        open(FILE(repo), 'w').close()
+    if not os.path.exists(file):
+        open(file, 'w').close()
 
     # Load the data
     try:
-        data = json.load(open(FILE(repo)), object_hook=datetime_hook)
+        data = json.load(open(file), object_hook=datetime_hook)
     except ValueError:
         data = dict(times=[])
 
@@ -141,28 +116,31 @@ def init(repo, opts):
     return timer
 
 
-def write(repo, opts, timer):
+def write(repo, args, timer):
     """Write timer data."""
-    json.dump(timer, open(FILE(repo), 'w'), cls=DatetimeEncoder)
-    repo.index.add([FILE(repo)])
-    repo.index.commit(opts.message or 'Hammertime!')
+    file = os.path.join(repo.working_dir, args.folder, args.file)
+    json.dump(timer, open(file, 'w'), cls=DatetimeEncoder)
+    repo.index.add([file, ])
+    repo.index.commit(args.message or 'Hammertime!')
 
 
-def start(repo, opts, timer):
+@argh.arg('-m', '--message', help='optional start message')
+def start(args):
     """Start timer."""
-    timer.start(opts)
+    args.timer.start(args.message)
 
 
-def stop(repo, opts, timer):
+@argh.arg('-m', '--message', help='optional stop message')
+def stop(args):
     """Stop timer."""
-    timer.stop(opts)
+    args.timer.stop(args.message)
 
 
-def total(repo, opts, timer):
+def total(args):
     """Report total running time."""
     total = timedelta(seconds=0)
 
-    for time in timer['times']:
+    for time in args.timer['times']:
         try:
             bits = map(int, time['delta'].split(':'))
             delta = (
@@ -178,30 +156,23 @@ def total(repo, opts, timer):
     print total
 
 
-def show(repo, opts, timer):
+@argh.arg('-i', '--indent', type=int,
+          help='add indentation to JSON output, eg: -i 4')
+def show(args):
     """Show timer data."""
-    print json.dumps(timer, indent=opts.indent, cls=DatetimeEncoder)
-
-
-def default(repo, opts, timer):
-    """Default command to display usage."""
-    parser.print_usage()
-
-
-commands = dict(start=start, stop=stop, show=show, default=default,
-                total=total)
+    print json.dumps(args.timer, indent=args.indent, cls=DatetimeEncoder)
 
 
 def main():
     """Main command line interface."""
+
+    parser = create_cmdline([start, stop, show, total])
+    args = parser.parse_args()
+
     try:
-        repo = git.Repo(DIR)
+        repo = git.Repo(os.getcwd())
     except git.exc.InvalidGitRepositoryError:
         print "fatal: Not a git repository"
-        sys.exit(1)
-
-    if cmd not in commands.keys():
-        parser.print_usage()
         sys.exit(1)
 
     if len(repo.heads) == 0:
@@ -216,12 +187,14 @@ def main():
         # Stash current changes to not lose anything
         repo.git.stash()
 
-        timer = init(repo, opts)
+        timer = init(repo, args)
 
-        commands[cmd](repo, opts, timer)
+        def attach_timer(args):
+            args.timer = timer
+        parser.dispatch(pre_call=attach_timer)
 
-        if cmd in ['start', 'stop']:
-            write(repo, opts, timer)
+        if args.function.__name__ in ['start', 'stop']:
+            write(repo, args, timer)
     finally:
         # Switch back to old branch
         getattr(repo.heads, branch.name).checkout()

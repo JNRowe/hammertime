@@ -24,7 +24,8 @@ setup(
     },
 
     install_requires=[
-        'GitPython'
+        'GitPython',
+        'argh',
     ],
 
     classifiers=[
