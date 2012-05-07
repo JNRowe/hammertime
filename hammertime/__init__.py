@@ -55,10 +55,15 @@ except IndexError:
 
 
 class DatetimeEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, datetime):
-            return o.isoformat()
-        return super(DatetimeEncoder, self).default(o)
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, timedelta):
+            # No need for milliseconds
+            return str(obj).split('.')[0]
+
+        return super(DatetimeEncoder, self).default(obj)
+
 
 def datetime_hook(obj):
     try:
@@ -68,7 +73,6 @@ def datetime_hook(obj):
     finally:
         return obj
 
-serialize_delta = lambda delta: str(delta).split('.')[0] # No need for miliseconds
 
 class Timer(dict):
     def start(self, opts):
@@ -92,8 +96,7 @@ class Timer(dict):
         })
 
         if time['start']['time']:
-            delta = now - time['start']['time'] 
-            time['delta'] = serialize_delta(delta)
+            time['delta'] = now - time['start']['time']
         else:
             time['delta'] = None
 
