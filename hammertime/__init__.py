@@ -1,3 +1,5 @@
+"""Git based time tracking"""
+
 import json
 import optparse
 import os
@@ -55,6 +57,9 @@ except IndexError:
 
 
 class DatetimeEncoder(json.JSONEncoder):
+
+    """JSON encoding support for datetime and timedelta."""
+
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -66,6 +71,7 @@ class DatetimeEncoder(json.JSONEncoder):
 
 
 def datetime_hook(obj):
+    """Decode datetime objects from JSON."""
     try:
         if obj.get('time', False):
             obj['time'] = datetime.strptime(obj.get('time'),
@@ -75,7 +81,11 @@ def datetime_hook(obj):
 
 
 class Timer(dict):
+
+    """Base timer container."""
+
     def start(self, opts):
+        """Start a new timer, if none active."""
         self['times'].append({
             'start': {
                 'time': datetime.utcnow(),
@@ -84,6 +94,7 @@ class Timer(dict):
         })
 
     def stop(self, opts):
+        """Stop running timer."""
         time = self['times'][-1]
 
         now = datetime.utcnow()
@@ -103,6 +114,7 @@ class Timer(dict):
 
 
 def init(repo, opts):
+    """Initiate and load timer data."""
     # Make sure a branch is available
     if not hasattr(repo.heads, opts.branch):
         repo.git.branch(opts.branch)
@@ -130,20 +142,24 @@ def init(repo, opts):
 
 
 def write(repo, opts, timer):
+    """Write timer data."""
     json.dump(timer, open(FILE(repo), 'w'), cls=DatetimeEncoder)
     repo.index.add([FILE(repo)])
     repo.index.commit(opts.message or 'Hammertime!')
 
 
 def start(repo, opts, timer):
+    """Start timer."""
     timer.start(opts)
 
 
 def stop(repo, opts, timer):
+    """Stop timer."""
     timer.stop(opts)
 
 
 def total(repo, opts, timer):
+    """Report total running time."""
     total = timedelta(seconds=0)
 
     for time in timer['times']:
@@ -163,10 +179,12 @@ def total(repo, opts, timer):
 
 
 def show(repo, opts, timer):
+    """Show timer data."""
     print json.dumps(timer, indent=opts.indent, cls=DatetimeEncoder)
 
 
 def default(repo, opts, timer):
+    """Default command to display usage."""
     parser.print_usage()
 
 
@@ -175,6 +193,7 @@ commands = dict(start=start, stop=stop, show=show, default=default,
 
 
 def main():
+    """Main command line interface."""
     try:
         repo = git.Repo(DIR)
     except git.exc.InvalidGitRepositoryError:
