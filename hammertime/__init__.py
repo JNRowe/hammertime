@@ -88,14 +88,15 @@ class Timer(dict):
             time['delta'] = None
 
 
-def init(repo, args):
+def init(repo, args, switch_branch=True):
     """Initiate and load timer data."""
-    # Make sure a branch is available
-    if not args.branch in repo.heads:
-        repo.git.branch(args.branch)
+    if switch_branch:
+        # Make sure a branch is available
+        if not args.branch in repo.heads:
+            repo.git.branch(args.branch)
 
-    # Switch the branch
-    getattr(repo.heads, args.branch).checkout()
+        # Switch the branch
+        getattr(repo.heads, args.branch).checkout()
 
     folder = os.path.join(repo.working_dir, args.folder)
     file = os.path.join(repo.working_dir, args.folder, args.file)
@@ -185,12 +186,14 @@ def main():
 
     try:
         # Save old branch
-        branch = repo.head.reference
+        orig_branch = repo.active_branch
+        switch_branch = not orig_branch.name == args.branch
 
-        # Stash current changes to not lose anything
-        repo.git.stash()
+        if switch_branch:
+            # Stash current changes to not lose anything
+            repo.git.stash()
 
-        timer = init(repo, args)
+        timer = init(repo, args, switch_branch=switch_branch)
 
         def attach_timer(args):
             args.timer = timer
@@ -199,14 +202,15 @@ def main():
         if args.function.__name__ in ['start', 'stop']:
             write(repo, args, timer)
     finally:
-        # Switch back to old branch
-        getattr(repo.heads, branch.name).checkout()
+        if switch_branch:
+            # Switch back to old branch
+            getattr(repo.heads, orig_branch.name).checkout()
 
-        # Pop the stashed changes
-        try:
-            repo.git.stash('pop')
-        except:
-            pass
+            # Pop the stashed changes
+            try:
+                repo.git.stash('pop')
+            except:
+                pass
 
 if __name__ == '__main__':
     main()
