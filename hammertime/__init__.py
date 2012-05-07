@@ -91,7 +91,7 @@ class Timer(dict):
 def init(repo, args):
     """Initiate and load timer data."""
     # Make sure a branch is available
-    if not hasattr(repo.heads, args.branch):
+    if not args.branch in repo.heads:
         repo.git.branch(args.branch)
 
     # Switch the branch
