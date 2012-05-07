@@ -54,7 +54,7 @@ Example session
 ::
 
     alen@mu:[hammertime ~master]$ git time start -m "Starting something to work on"
-    alen@mu:[hammertime ~master]$ vim README.md 
+    alen@mu:[hammertime ~master]$ vim README.rst 
     alen@mu:[hammertime ~master]$ git commit -am "Saved the example session"
     [master 11a0c98] Saved the example session
      1 files changed, 5 insertions(+), 0 deletions(-)

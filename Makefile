@@ -1,6 +1,5 @@
 all:
 	@echo "Nothing to do"
 
-upload: 
-	pandoc README.md -o README.rst
+upload:
 	python setup.py sdist upload
