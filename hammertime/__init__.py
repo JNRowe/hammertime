@@ -131,6 +131,8 @@ def write(repo, args, timer):
 @argh.arg('-m', '--message', help='optional start message')
 def start(args):
     """Start timer."""
+    if len(args.timer['times']) > 0 and 'start' in args.timer['times'][-1]:
+        raise argh.CommandError('Already running!')
     args.timer.start(args.message)
 
 
