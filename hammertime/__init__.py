@@ -147,12 +147,8 @@ def total(args):
 
     for time in args.timer['times']:
         try:
-            bits = map(int, time['delta'].split(':'))
-            delta = (
-                timedelta(seconds=bits[0] * 3600)
-                + timedelta(seconds=bits[1] * 60)
-                + timedelta(seconds=bits[2])
-            )
+            hours, minutes, seconds = map(int, time['delta'].split(':'))
+            delta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
         except (KeyError, IndexError):
             delta = timedelta(seconds=0)
 
