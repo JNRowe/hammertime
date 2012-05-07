@@ -82,10 +82,7 @@ class Timer(dict):
             }
         })
 
-        if time['start']['time']:
-            time['delta'] = now - time['start']['time']
-        else:
-            time['delta'] = None
+        time['delta'] = now - time['start']['time']
 
 
 def init(repo, args, switch_branch=True):
@@ -139,6 +136,8 @@ def start(args):
 @argh.arg('-m', '--message', help='optional stop message')
 def stop(args):
     """Stop timer."""
+    if len(args.timer['times']) == 0:
+        raise argh.CommandError('No entries to stop!')
     args.timer.stop(args.message)
 
 
