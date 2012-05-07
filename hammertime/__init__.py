@@ -1,5 +1,10 @@
 """Git based time tracking"""
 
+__author__ = "Alen Mujezinovic <alen@caffeinehit.com>"
+__copyright__ = "Copyright (c) 2011 Alen Mujezinovic <alen@caffeinehit.com>"
+__license__ = "MIT"
+__version__ = "0.2.2"
+
 import json
 import os
 import sys
@@ -8,8 +13,6 @@ from datetime import (datetime, timedelta)
 
 import argh
 import git
-
-__version__ = "0.2.2"
 
 
 def create_cmdline(commands):
